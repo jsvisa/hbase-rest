@@ -1,0 +1,21 @@
+hash: 0626a59645fb323164ff8709f40c7054cc1c46cd58190d269f45623aca766e38
+updated: 2018-03-27T15:58:39.947933991+08:00
+imports:
+- name: github.com/golang/protobuf
+  version: bbd03ef6da3a115852eaf24c8a1c46aeb39aa175
+  subpackages:
+  - proto
+- name: github.com/juju/errors
+  version: c7d06af17c68cd34c835053720b21f6549d9b0ee
+- name: github.com/ngaut/go-zookeeper
+  version: 9c3719e318c7cfd072e41eb48cb71fcaa49d5e05
+  subpackages:
+  - zk
+- name: github.com/ngaut/log
+  version: b8e36e7ba5ac61ce5644e570f1cc42d97dbaf8ed
+- name: github.com/pingcap/go-hbase
+  version: 7719ebb8a546a5a8359ca5344e4f5f89b9919300
+  subpackages:
+  - iohelper
+  - proto
+testImports: []
