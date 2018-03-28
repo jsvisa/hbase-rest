@@ -1,10 +1,12 @@
-hash: 0626a59645fb323164ff8709f40c7054cc1c46cd58190d269f45623aca766e38
-updated: 2018-03-27T15:58:39.947933991+08:00
+hash: ad46a84ed80c98827e8ba20d99e8d6155f8689177f64b057cbed8a3c5d707344
+updated: 2018-04-02T17:46:55.110845795+08:00
 imports:
 - name: github.com/golang/protobuf
-  version: bbd03ef6da3a115852eaf24c8a1c46aeb39aa175
+  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
   subpackages:
   - proto
+- name: github.com/jsvisa/logging
+  version: 3df13424eee3a60b2e66368aa02ce45a1e8e0f40
 - name: github.com/juju/errors
   version: c7d06af17c68cd34c835053720b21f6549d9b0ee
 - name: github.com/ngaut/go-zookeeper
@@ -18,4 +20,6 @@ imports:
   subpackages:
   - iohelper
   - proto
-testImports: []
+testImports:
+- name: github.com/pingcap/check
+  version: 1c287c953996ab3a0bf535dba9d53d809d3dc0b6

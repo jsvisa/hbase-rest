@@ -1,4 +1,4 @@
 package: github.com/jsvisa/hbase-rest
 import:
-- package: github.com/ngaut/log
+- package: github.com/jsvisa/logging
 - package: github.com/pingcap/go-hbase

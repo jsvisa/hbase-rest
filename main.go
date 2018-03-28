@@ -3,132 +3,46 @@ package main
 import (
 	"flag"
 	"fmt"
-	"net/http"
+	"os"
 	"runtime"
-	"strconv"
+	"strings"
 	"sync"
-	"time"
-
-	"github.com/ngaut/log"
-	hbase "github.com/pingcap/go-hbase"
 )
 
 var (
-	rowPrefix = flag.String("p", "", "row prefix")
-	method    = flag.String("m", "put", "put, delete, scan, get")
-	onlyInit  = flag.Bool("init", false, "only init the hbase schema")
+	zkAddrs = flag.String("zk-addr", "127.0.0.1:2181", "Zookeeper Addresses, splitted by ','")
+	zkPath  = flag.String("zk-path", "/hbase", "Zookeeper HBase path")
+	listen  = flag.String("listen", "0.0.0.0:3130", "Listen Addresses, splitted by ','")
+	goProcs = flag.Int("cpus", 2, "The number of CPUS")
 )
-
-var benchTbl = "go-hbase-test"
-var cli hbase.HBaseClient
-
-func createTable(tblName string) error {
-	desc := hbase.NewTableDesciptor(tblName)
-	desc.AddColumnDesc(hbase.NewColumnFamilyDescriptor("cf"))
-	err := cli.CreateTable(desc, nil)
-	if err != nil {
-		dropTable(tblName)
-		err = createTable(tblName)
-		if err != nil {
-			panic(err)
-		}
-	}
-	return err
-}
-
-func dropTable(tblName string) {
-	cli.DisableTable(tblName)
-	cli.DropTable(tblName)
-}
 
 func main() {
 	flag.Parse()
-	runtime.GOMAXPROCS(1)
+	runtime.GOMAXPROCS(*goProcs)
 
-	prefix := *rowPrefix
-	if prefix == "" {
-		ts := time.Now()
-		prefix = fmt.Sprintf("%d", ts.UnixNano())
-	}
-
-	var err error
-	cli, err = hbase.NewClient([]string{"10.10.1.0:2181"}, "/hbase")
+	cli, err := newClient(*zkAddrs, *zkPath)
 	if err != nil {
-		panic(err)
+		fmt.Printf("error: %v\n", err)
+		os.Exit(1)
 	}
 
-	if *onlyInit {
-		dropTable(benchTbl)
-		createTable(benchTbl)
-		return
+	listenAddrs := make([]string, 0)
+
+	for _, addr := range strings.Split(*listen, ",") {
+		listenAddrs = append(listenAddrs, addr)
 	}
 
-	go func() {
-		log.Error(http.ListenAndServe("0.0.0.0:8889", nil))
-	}()
-
-	ct := time.Now()
 	wg := &sync.WaitGroup{}
-	for j := 0; j < 100; j++ {
-		wg.Add(1)
-		go func(j int) {
-			defer wg.Done()
-			for i := 0; i < 100; i++ {
-				row := []byte(fmt.Sprintf("row_%s_%d_%d", prefix, i, j))
-
-				log.Infof(string(row))
-
-				switch *method {
-				case "get":
-					g := hbase.NewGet(row)
-
-					resp, err := cli.Get(benchTbl, g)
-
-					if err != nil {
-						log.Error(err)
-						return
-					}
-					if resp != nil {
-						log.Infof("get result: %v", resp.Columns)
-					}
-				case "put":
-					p := hbase.NewPut(row)
-					p.AddStringValue("cf", "q", "val_"+strconv.Itoa(i*j))
-					_, err := cli.Put(benchTbl, p)
-					if err != nil {
-						log.Error(err)
-						return
-					}
-				case "delete":
-					d := hbase.NewDelete(row)
-					_, err := cli.Delete(benchTbl, d)
-
-					if err != nil {
-						log.Error(err)
-						return
-					}
-				case "scan":
-					scan := hbase.NewScan([]byte(benchTbl), 100, cli)
-					defer scan.Close()
-
-					scan.StartRow = []byte("row_")
-					// scan.StopRow = []byte("row")
-
-					cnt := 0
-					for {
-						r := scan.Next()
-						if r == nil || scan.Closed() {
-							break
-						}
-						log.Infof("scan get %s", string(r.Row))
-						cnt++
-					}
-
-				}
-			}
-		}(j)
+	server, err := newRestServer(listenAddrs, wg, cli)
+	if err != nil {
+		fmt.Printf("error: %v\n", err)
+		os.Exit(-1)
 	}
+
+	server.Start()
+	defer func() {
+		server.Stop()
+		cli.close()
+	}()
 	wg.Wait()
-	elapsed := time.Since(ct)
-	log.Errorf("took %s", elapsed)
 }
