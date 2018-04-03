@@ -27,7 +27,9 @@ type restHandler struct {
 }
 
 func (rh restHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Server", "HBaseRest-Go/"+version)
 	w.Header().Set("Content-Type", "application/json")
+
 	rh.handler(rh.client, w, r)
 }
 
@@ -65,6 +67,7 @@ func (server *restServer) Start() error {
 		server.wg.Add(1)
 		go func(l net.Listener) {
 			defer server.wg.Done()
+			httpServer.SetKeepAlivesEnabled(true)
 			httpServer.Serve(listener)
 		}(listener)
 	}
@@ -122,8 +125,26 @@ func newRestServer(listenAddresses []string, wg *sync.WaitGroup, cli *client) (*
 	return server, nil
 }
 
+type customResponseWriter struct {
+	http.ResponseWriter
+	status int
+	size   int
+}
+
+func (c *customResponseWriter) WriteHeader(status int) {
+	c.status = status
+	c.ResponseWriter.WriteHeader(status)
+}
+
+func (c *customResponseWriter) Write(b []byte) (int, error) {
+	size, err := c.ResponseWriter.Write(b)
+	c.size += size
+	return size, err
+}
+
 // request path is /table/column/row
 func handle(cli *client, w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	parts := strings.Split(r.URL.Path, "/")
 	if len(parts) < 4 {
 		w.WriteHeader(400)
@@ -146,14 +167,25 @@ func handle(cli *client, w http.ResponseWriter, r *http.Request) {
 		Row:       "/" + strings.Join(parts[3:], "/"),
 	}
 
+	cw := &customResponseWriter{
+		ResponseWriter: w,
+		size:           0,
+		status:         200,
+	}
+
 	switch r.Method {
 	case "GET":
-		handleGet(cli, w, r, req)
+		handleGet(cli, cw, r, req)
 	case "PUT":
-		handlePut(cli, w, r, req)
+		handlePut(cli, cw, r, req)
 	case "DELETE":
-		handleDelete(cli, w, r, req)
+		handleDelete(cli, cw, r, req)
 	}
+
+	cli.logger.Printf("(%s) \"%s %s %s\" %d %d %d",
+		r.RemoteAddr, r.Method, r.RequestURI, r.Proto,
+		cw.status, cw.size,
+		int(time.Since(start).Seconds()*1000))
 
 	return
 }

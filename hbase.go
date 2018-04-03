@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io"
+	"log"
 	"strings"
 
 	"github.com/jsvisa/logging"
@@ -8,10 +10,11 @@ import (
 )
 
 type client struct {
-	cli hbase.HBaseClient
+	cli    hbase.HBaseClient
+	logger *log.Logger
 }
 
-func newClient(zkHosts string, zkRoot string) (*client, error) {
+func newClient(zkHosts string, zkRoot string, logFile io.Writer) (*client, error) {
 	addrs := make([]string, 0)
 
 	for _, addr := range strings.Split(zkHosts, ",") {
@@ -23,9 +26,11 @@ func newClient(zkHosts string, zkRoot string) (*client, error) {
 		logging.Warningf("NewClient failed: %v", err)
 		return nil, err
 	}
+	flags := log.LstdFlags
 
 	return &client{
-		cli: cli,
+		cli:    cli,
+		logger: log.New(logFile, "", flags),
 	}, nil
 }
 
