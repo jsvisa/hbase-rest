@@ -68,7 +68,7 @@ func (server *restServer) Start() error {
 		go func(l net.Listener) {
 			defer server.wg.Done()
 			httpServer.SetKeepAlivesEnabled(true)
-			httpServer.Serve(listener)
+			httpServer.Serve(l)
 		}(listener)
 	}
 
@@ -114,7 +114,7 @@ func newRestServer(listenAddresses []string, wg *sync.WaitGroup, cli *client) (*
 			for _, listenerToClose := range server.listeners {
 				closeErr := listenerToClose.Close()
 				if closeErr != nil {
-					fmt.Errorf("Could not close listener: %v", closeErr)
+					fmt.Printf("Could not close listener: %v", closeErr)
 				}
 			}
 			return nil, err
