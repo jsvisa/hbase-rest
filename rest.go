@@ -27,7 +27,7 @@ type restHandler struct {
 }
 
 func (rh restHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Server", "HBaseRest-Go/"+version)
+	w.Header().Set("Server", "HBaseRest-Go/"+VERSION)
 	w.Header().Set("Content-Type", "application/json")
 
 	rh.handler(rh.client, w, r)

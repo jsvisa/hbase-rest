@@ -9,18 +9,27 @@ import (
 	"sync"
 )
 
+const VERSION = "0.1.0"
+
 var (
-	version   = "0.1.0"
 	zkAddrs   = flag.String("zk-addr", "127.0.0.1:2181", "Zookeeper Addresses, splitted by ','")
 	zkPath    = flag.String("zk-path", "/hbase", "Zookeeper HBase path")
 	listen    = flag.String("listen", "0.0.0.0:3130", "Listen Addresses, splitted by ','")
+	accessLog = flag.String("log", "", "Path to store access log")
+	version   = flag.Bool("v", false, "Print version")
 	goProcs   = flag.Int("cpus", 2, "The number of CPUS")
-	accessLog = flag.String("access-log", "", "Path to store access log")
 )
 
 func main() {
 	flag.Parse()
-	runtime.GOMAXPROCS(*goProcs)
+
+	if *version {
+		fmt.Printf("hbase-rest version: %s\n", VERSION)
+		os.Exit(0)
+	}
+	if *goProcs > 0 {
+		runtime.GOMAXPROCS(*goProcs)
+	}
 
 	accessFile := os.Stdout
 
